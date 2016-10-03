@@ -1,87 +1,119 @@
-#include<stdlib.h>
-#include<stdio.h>
-#include<string.h>
+/*graph.c*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "mylib.h"
 #include "graph.h"
+#include "queue.h"
 
-typedef enum {UNVISITED, VISITED_SELF, VISITED_DESCENDANTS} state_t;
+#define IS_UNVISITED(x) (UNVISITED == (x)->state)
+#define IS_VISITED_SELF(x) (VISITED_SELF == (x)->state)
+#define IS_VISITED_DESCENDANTS(x) (VISITED_DESCENDANTS == (x)->state)
 
-    
-struct graphrec{
-    int **edges;
-    int *vertices;
-    int num_vertices;
+
+typedef struct vertex *vertex;
+typedef enum { UNVISITED, VISITED_SELF, VISITED_DESCENDANTS } vertex_state;
+
+struct vertex{
+    int predecessor;
+    int distance;
+    vertex_state state;
+    int finish;
 };
 
+struct graphrec{
+    int **edges;
+    vertex *vertices;
+    int num_vertex;
+};
 
-graph graph_new(int vertices){
+graph graph_new(int num_vertex){
     int i;
-    graph g = emalloc(sizeof * g);
-    g->num_vertices = vertices;
-    g->edges = emalloc..;
-    
-
-}
-
-graph graph_add_edge(){
-}
-
-void graph_bfs(graph g, source){
-    int i;
-    for(i=0; i< q->num_vertices; i++){
-        
-
-    }
-
-
-
-
-static unsigned int htable_word_to_int(char *word) {
-    unsigned int result = 0;
-
-    while (*word != '\0') {
-        result = (*word++ + 31 * result);
+    int j;
+    graph result = emalloc(sizeof *result);
+    result->num_vertex = num_vertex;
+    result->vertices = emalloc(num_vertex * sizeof result->vertices[0]);
+    result->edges = emalloc(num_vertex * sizeof result->edges[0]);
+    for(i=0; i<num_vertex;i++){
+        /*not sure how to initialise an empty array of arrays */
+        result->edges[i] = emalloc(num_vertex * sizeof result->edges[i][0]);
+        for(j=0; j<num_vertex; j++){
+            result->edges[i][j] =-1;
+        }
+        result->vertices[i] = NULL;
     }
     return result;
 }
 
+graph graph_free(graph g){
+    int i;
+    for(i=0; i<g->num_vertex;i++){
+        free(g->edges[i]);
+    }
+    free(g->edges);
+    free(g->vertices);
+    free(g);
+    return g;
+}
 
-int htable_insert(htable h, char *key){
-    unsigned int val = htable_word_to_int(key);
-    int index= val%h->capacity;
-    int init=index;
+int add_opposite_edge(graph g, int v1, int v2){
+    g->edges[v2][v1]=1;
+    return 1;
+}
 
-    do{
-        if(h->keys[index]==NULL){
-            h->keys[index] = emalloc((strlen(key)+1) * sizeof key[0]);
-            strcpy(h->keys[index], key);
-            h->num_keys++;
-            return 1;
-        }else if(strcmp(h->keys[index], key) != 0){
-            index = (index+1)% h->capacity;
+int graph_add_edge(graph g, int v1, int v2){
+    g->edges[v1][v2]=1;
+    /*if bi-directional*/
+    add_opposite_edge(g, v1, v2);
+    return 1;
+}
+
+void graph_bfs(graph g, int source){
+    int i;
+    queue q = queue_new();
+    int v;
+    int u;
+    for(i=0; i<g->num_vertex;i++){
+        g->vertices[i] = emalloc(sizeof *g->vertices[i]);
+        g->vertices[i]->state = UNVISITED;
+        g->vertices[i]->distance = -1;
+        g->vertices[i]->predecessor = -1;
+    }
+    g->vertices[source]->state = VISITED_SELF;
+    g->vertices[source]->distance = 0;
+
+    enqueue(q, source);
+    while(queue_size(q)>0){
+        u=dequeue(q);
+        for(v=0; v< g->num_vertex;v++){
+            /*for each unvisited adjacent vertex of v*/
+            if(g->edges[u][v]==1 && IS_UNVISITED(g->vertices[v])){
+                g->vertices[v]->state = VISITED_SELF;
+                g->vertices[v]->distance = g->vertices[u]->distance +1;
+                g->vertices[v]->predecessor = u;
+                enqueue(q, v);
+            }
         }
-    }while(index!=init);
-
-    return 0; 
-
-
-}
-
-void htable_print(htable h, FILE *stream){
-    int i;
-    for (i = 0; i < h->capacity; i++) {
-        fprintf(stream, "%2d %s\n", i, h->keys[i] == NULL ? "" : h->keys[i]);
+        g->vertices[u]->state = VISITED_DESCENDANTS;
     }
-
 }
 
-void htable_free(htable h){
+void graph_print(graph g){
     int i;
-    for(i=0; i< h->capacity; i++){
-        free(h->keys[i]);
+    int j;
+    printf("adjacency list:\n");
+    for(i=0; i<g->num_vertex;i++){
+        printf("%d | ",i);
+        for(j=0;j<g->num_vertex;j++){
+            if(g->edges[i][j]==1){
+                printf("%d, ", j);
+            }
+        }
+        printf("\n");
     }
-    free(h->keys);
-    free(h);
+    printf("\n");
+    for(i=0; i<g->num_vertex;i++){
+        printf("vertex distance pred\n");
+        printf("%5d %5d %5d\n", i, g->vertices[i]->distance, g->vertices[i]->predecessor);
+    }
 }
-
-
